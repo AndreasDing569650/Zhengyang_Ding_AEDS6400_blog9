@@ -230,8 +230,10 @@ Uncertainty in return differences and prediction-loss reductions is assessed usi
 The main analysis files and generated outputs are organized as follows:
 
 ```text
-6400-blog9/
+Zhengyang_Ding_AEDS6400_blog9/
 ├── README.md
+├── .gitignore
+├── Zhengyang_Ding_AEDS6400_blog9.Rproj
 ├── code/
 │   ├── 00_config.R
 │   ├── 01_class_results.R
@@ -241,25 +243,107 @@ The main analysis files and generated outputs are organized as follows:
 ├── data/
 │   ├── raw_data/
 │   │   ├── Full_Result.xlsx
-│   │   ├── yahoo_cache/
+│   │   ├── prices_daily.csv
 │   │   ├── prices_daily.rds
-│   │   └── prices_daily.csv
+│   │   └── yahoo_cache/
+│   │       ├── AAPL.rds
+│   │       ├── ABT.rds
+│   │       ├── ADBE.rds
+│   │       ├── AMAT.rds
+│   │       ├── AMD.rds
+│   │       ├── AMGN.rds
+│   │       ├── AXP.rds
+│   │       ├── BA.rds
+│   │       ├── BAC.rds
+│   │       ├── BLK.rds
+│   │       ├── CAT.rds
+│   │       ├── COP.rds
+│   │       ├── COST.rds
+│   │       ├── CSCO.rds
+│   │       ├── CVX.rds
+│   │       ├── DIS.rds
+│   │       ├── DUK.rds
+│   │       ├── GILD.rds
+│   │       ├── GS.rds
+│   │       ├── HD.rds
+│   │       ├── HON.rds
+│   │       ├── IBM.rds
+│   │       ├── INTC.rds
+│   │       ├── JNJ.rds
+│   │       ├── JPM.rds
+│   │       ├── KO.rds
+│   │       ├── LMT.rds
+│   │       ├── MCD.rds
+│   │       ├── MDT.rds
+│   │       ├── MRK.rds
+│   │       ├── MS.rds
+│   │       ├── MSFT.rds
+│   │       ├── NKE.rds
+│   │       ├── NVDA.rds
+│   │       ├── ORCL.rds
+│   │       ├── PEP.rds
+│   │       ├── PFE.rds
+│   │       ├── PG.rds
+│   │       ├── QCOM.rds
+│   │       ├── SBUX.rds
+│   │       ├── SLB.rds
+│   │       ├── SO.rds
+│   │       ├── SPY.rds
+│   │       ├── T.rds
+│   │       ├── TXN.rds
+│   │       ├── UNH.rds
+│   │       ├── UPS.rds
+│   │       ├── VZ.rds
+│   │       ├── WFC.rds
+│   │       ├── WMT.rds
+│   │       └── XOM.rds
 │   └── processed_data/
 │       ├── 01_class_data_audit.csv
 │       ├── 01_class_results_clean.csv
 │       ├── 03_model_panel.rds
-│       ├── 04_out_of_sample_predictions.csv
 │       ├── 04_daily_backtest.csv
-│       ├── 04_period_returns.csv
-│       └── 04_holdings.csv
+│       ├── 04_holdings.csv
+│       ├── 04_out_of_sample_predictions.csv
+│       └── 04_period_returns.csv
 ├── models/
 │   ├── 04_selected_config.rds
 │   ├── 04_original_model.rds
-│   └── 04_improved_2020.rds ... 04_improved_2025.rds
+│   ├── 04_improved_2020.rds
+│   ├── 04_improved_2021.rds
+│   ├── 04_improved_2022.rds
+│   ├── 04_improved_2023.rds
+│   ├── 04_improved_2024.rds
+│   └── 04_improved_2025.rds
 └── results/
-    ├── tables/
     ├── figures/
-    └── notes/
+    │   ├── 01_class_return_distribution.png
+    │   ├── 01_class_paired_returns.png
+    │   ├── 01_class_mean_difference.png
+    │   ├── 04_net_wealth.png
+    │   ├── 04_annual_returns.png
+    │   └── 04_cost_sensitivity.png
+    ├── notes/
+    │   ├── 00_design_notes.txt
+    │   ├── 01_class_results_summary.txt
+    │   ├── 01_session_info.txt
+    │   ├── 02_session_info.txt
+    │   └── 04_session_info.txt
+    └── tables/
+        ├── 01_data_quality.csv
+        ├── 01_portfolio_summary.csv
+        ├── 01_paired_comparison.csv
+        ├── 02_download_log.csv
+        ├── 02_price_coverage.csv
+        ├── 02_missing_quotes.csv
+        ├── 03_observations_by_year.csv
+        ├── 03_feature_definitions.csv
+        ├── 04_validation_results.csv
+        ├── 04_prediction_metrics.csv
+        ├── 04_rank_ic_by_period.csv
+        ├── 04_investment_performance.csv
+        ├── 04_annual_returns.csv
+        ├── 04_return_difference_intervals.csv
+        └── 04_prediction_loss_intervals.csv
 ```
 
 ### Script descriptions
