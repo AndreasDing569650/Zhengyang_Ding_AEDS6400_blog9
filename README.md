@@ -4,23 +4,23 @@
 
 This repository contains the R code, data, fitted models, tables, and figures for Blog Post 9: Predicting Stock Returns with Gradient Boosting.
 
-The project revisits a classroom stock-selection experiment and evaluates whether changes to an XGBoost model improve out-of-sample stock-return forecasts and investment performance.
+The project revisits a classroom stock-selection experiment and evaluates whether changes to an XGBoost model improve stock-return predictions and investment performance.
 
 The analysis addresses three questions:
 
 1. Did portfolios selected after analysis outperform portfolios selected subjectively in the classroom experiment?
-2. Can revised predictors, stronger regularization, and annual retraining improve the original gradient boosting model?
-3. Do better forecasts translate into economically meaningful investment returns after trading costs?
+2. Can revised predictors and model settings improve the original gradient boosting model?
+3. Do improvements in prediction accuracy translate into better investment performance?
 
-The improved model reduced prediction errors relative to the original model and generated higher investment returns in the backtest. However, it did not outperform a historical-mean forecast on prediction error, and confidence intervals for its average investment-return advantages included zero.
+The revised model reduced RMSE relative to the original model, but did not outperform a historical-mean forecast. Its direction accuracy and stock-ranking performance also declined. In the classroom backtest, it finished with a slightly lower cumulative return and substantially greater monthly variation.
 
 ## Introduction
 
-Stock prices respond to new information, while future news is unknown. Relationships found in historical data may also change over time. A flexible machine learning model can therefore fit past returns without identifying patterns that remain useful in new market conditions.
+In our computational economics class, we explored whether financial analysis could help investors select stocks more effectively than intuition alone. Each team created two portfolios: one based on subjective choices and another informed by analysis.
 
-This project separates predictive accuracy from investment performance. A model may forecast individual returns poorly while still ranking some stocks usefully. Conversely, a profitable backtest may reflect concentration, market exposure, or a favorable sample period.
+The class also introduced an XGBoost model that predicts future stock returns using historical market data. This project implements that model, modifies its predictors and settings, and compares the results using the same training observations, test observations, and portfolio procedure.
 
-The analysis combines a classroom portfolio comparison with a historical backtest using a common stock universe, trading schedule, and transaction-cost framework.
+The analysis distinguishes prediction accuracy from investment performance. Smaller forecasting errors do not necessarily produce better stock rankings or a portfolio with more favorable returns and risk.
 
 ## Data and Method
 
@@ -39,7 +39,9 @@ The relevant columns are:
 | `portfolio1` | Final value of the portfolio selected subjectively without analysis |
 | `portfolio2` | Final value of the portfolio selected after analysis |
 
-Each portfolio started with **$100,000**. The specific analytical procedures used for Portfolio 2 are unknown.
+Each portfolio started with **$100,000**.
+
+Classroom analytical tools included correlations, Sharpe ratios, Jensen’s alpha, portfolio optimization, and stock-return prediction. The methods actually used by each team are not identified in the results spreadsheet.
 
 Holding-period returns are calculated as:
 
@@ -54,176 +56,219 @@ The analysis uses 45 complete team-level pairs and reports:
 - paired return differences;
 - a two-sided paired t-test;
 - a 95% percentile bootstrap confidence interval using 10,000 resamples; and
-- figures showing return distributions and within-team comparisons.
+- figures showing return distributions, within-team comparisons, and confidence intervals.
 
 All paired differences are defined as **Portfolio 2 minus Portfolio 1**. Positive values favor the analyzed portfolio.
 
-These comparisons describe the observed outcomes. They do not identify the causal effect of analysis, because stock selections and analytical methods were not randomly assigned.
+The accompanying blog also discusses our five-stock subjective portfolio using its simulator screenshot. That discussion is separate from the statistical analysis of the class spreadsheet.
 
 ### Market data
 
-Daily market data are obtained from [Yahoo Finance](https://finance.yahoo.com/) through the Yahoo interface in R's [quantmod](https://www.quantmod.com/) package.
+Daily market data are obtained from [Yahoo Finance](https://finance.yahoo.com/) through R’s [`tidyquant`](https://business-science.github.io/tidyquant/) package.
 
-This is an unofficial interface and does not require an API key.
+The dataset uses the classroom stock universe: **95 U.S. stocks and SPY**.
 
-The dataset contains 50 selected U.S. stocks and SPY, used as a market proxy and investment benchmark. Downloaded fields are:
+Downloaded fields are:
 
-- date and ticker symbol;
+- ticker symbol and date;
 - open, high, low, and close;
 - trading volume; and
 - adjusted closing price.
 
-Adjusted closing prices are used as a total-return proxy when constructing returns.
+Adjusted closing prices are used to construct return variables.
 
-The saved snapshot covers **January 4, 2010, through December 31, 2025**, with 4,024 observations for each of the 51 securities.
+The download request begins on **January 1, 2022**, and ends at `Sys.Date()`. The reported snapshot was downloaded on **November 16, 2026**, and contains observations from **January 3, 2022, through November 13, 2026**.
 
-The fixed stock sample is:
+Each of the 96 securities has 1,222 observations in this snapshot.
+
+The stock universe is:
 
 ```text
-AAPL MSFT NVDA IBM ORCL CSCO INTC AMD QCOM TXN ADBE AMAT
-JPM BAC WFC GS MS AXP BLK
-JNJ PFE MRK ABT AMGN GILD MDT UNH
-PG KO PEP WMT COST MCD HD NKE SBUX
-CAT HON UPS BA LMT
-XOM CVX COP SLB
-DIS VZ T DUK SO
+AAPL MSFT NVDA GOOG META AMZN AVGO ORCL ADBE CRM
+CSCO AMD INTC QCOM TXN IBM NOW INTU AMAT MU
+
+JPM BAC WFC GS MS BLK C SCHW SPGI AXP
+USB PNC TFC COF
+
+UNH JNJ LLY PFE MRK ABBV TMO DHR ABT BMY
+AMGN GILD CVS ISRG MDT
+
+TSLA HD MCD NKE SBUX LOW TJX BKNG CMG ORLY
+
+WMT COST PG KO PEP PM MO CL EL
+
+CAT GE HON UPS BA RTX DE LMT MMM ETN
+
+XOM CVX COP SLB EOG
+
+NFLX DIS CMCSA TMUS VZ
+
+AMT PLD NEE DUK SO LIN APD
 ```
 
-This is an ex-post selected sample, not a reconstruction of historical index membership. Survivorship and selection bias limit how broadly the results can be generalized.
+The saved snapshot is stored in:
 
-Individual downloads are cached in `data/raw_data/yahoo_cache/`. The download script records coverage and failures and stops if required securities or trading dates are missing.
+```text
+data/raw_data/market_snapshot.rds
+```
+
+It contains the price data, security list, requested date range, and download timestamp.
+
+The combined prices are also saved as:
+
+```text
+data/raw_data/prices_daily.rds
+data/raw_data/prices_daily.csv
+```
 
 ### Prediction target and time divisions
 
-Features use information available by the signal-date close.
-
-For a signal on trading day \(t\), the prediction target is:
+The prediction target follows the classroom definition:
 
 $$
 R_{i,t}^{forward}
 =
-\frac{P_{i,t+21}^{adj}}{P_{i,t+1}^{adj}} - 1
+\frac{P_{i,t+20}^{adj}}{P_{i,t+1}^{adj}} - 1
 $$
 
-This represents buying at the next trading day's close and holding for 20 trading days.
+The denominator is the next trading day’s adjusted closing price. The numerator is the adjusted closing price on the twentieth future trading day.
 
-Signals occur every 20 trading days. Consecutive portfolios share an exit and entry date, so their holding intervals do not overlap.
+The training and test samples are divided by observation date:
 
-The time divisions are:
+| Sample | Date rule | Actual observation dates | Observations |
+|:--|:--|:--|--:|
+| Training | Before January 1, 2024 | July 6, 2022–December 29, 2023 | 35,625 |
+| Test | January 1, 2024 onward | January 2, 2024–October 16, 2026 | 66,595 |
 
-| Period | Purpose |
-|:--|:--|
-| 2010 | Feature-history preparation |
-| 2011 onward | Eligible model observations |
-| 2018–2019 | Parameter validation |
-| 2020–2025 | Final out-of-sample evaluation |
+The first usable training date reflects the historical observations required to construct the predictors. The final test date reflects the future prices required to calculate the target.
 
-At every fitting cutoff, training includes only observations whose future-return labels have already been realized.
+Both models use identical training rows, test rows, and target values.
 
-Final evaluation contains **74 prediction dates and 3,700 stock-level forecasts**. The first and last calendar years cover partial investment years.
+Model settings are fixed in advance. There is no separate validation period, automated parameter search, or annual retraining.
 
 ### Original XGBoost model
 
-The baseline reconstructs the classroom-reference XGBoost model using a common sample and evaluation procedure.
+The original model follows the classroom specification.
 
-Its predictors include raw price and volume variables, daily returns, classroom-defined momentum measures, volatility, short-term returns, and SPY returns.
+Its predictors include:
 
-The main settings are:
+- open, high, low, close, and adjusted prices;
+- trading volume;
+- daily stock returns;
+- daily SPY returns;
+- classroom-defined one-, three-, and six-month momentum;
+- lagged return volatility;
+- short-term returns; and
+- market-adjusted daily returns.
+
+The main model settings are:
 
 | Parameter | Setting |
 |:--|--:|
-| Boosting rounds | 300 |
-| Maximum tree depth | 5 |
+| Trees | 300 |
+| Tree depth | 5 |
 | Learning rate | 0.05 |
-| Minimum child weight | 10 |
-| Row subsampling | 1.00 |
-| Column subsampling | 1.00 |
-| L2 regularization, `lambda` | 1 |
+| Loss reduction | 0 |
+| `min_n` | 10 |
 
-The baseline is fitted using labels realized before January 1, 2020, and remains fixed during testing.
+The model is implemented using a `tidymodels` workflow with the `xgboost` engine. Date and ticker symbol are assigned ID roles rather than used as predictors.
 
-The classroom-reference script is available in [this archive](https://github.com/Changlin-DU/Stock_Returns/blob/main/code/original/original_xgboost.R).
-
-Because this project changes the stock sample, training periods, and evaluation rules, it is a reconstruction rather than an exact replication of the classroom results.
+The model is fitted once using the training sample and then used to generate predictions for the test sample.
 
 ### Improved XGBoost model
 
-The improved model replaces raw price levels with scale-free predictors:
+The revised model replaces raw price levels with proportional indicators:
 
 - 21-, 63-, and 126-trading-day momentum;
-- 12-to-1-month momentum, excluding the most recent month;
 - five-trading-day returns;
 - 21-trading-day volatility;
-- momentum relative to SPY;
+- 63-trading-day momentum relative to SPY;
 - current volume relative to its 21-day average;
-- distance below the trailing 252-day high; and
+- distance below the trailing 126-day high; and
 - daily SPY returns.
 
-Eight candidate configurations combine:
+These features describe recent performance without depending directly on a stock’s price level.
 
-- tree depths of 2 or 3;
-- 200 or 400 boosting rounds; and
-- expanding or trailing five-year training windows.
+The model uses more trees, shallower depth, a lower learning rate, and stronger regularization:
 
-Selection uses the lowest validation RMSE in 2018–2019. Test-period performance is not used to select parameters.
+| Parameter | Original | Improved |
+|:--|--:|--:|
+| Trees | 300 | 500 |
+| Tree depth | 5 | 3 |
+| Learning rate | 0.05 | 0.03 |
+| Loss reduction | 0 | 0.01 |
+| `min_n` | 10 | 30 |
+| L2 regularization, `lambda` | 1 | 5 |
+| Row sampling proportion | 1.00 | 0.80 |
+| Column sampling proportion | 1.00 | 0.80 |
 
-The selected configuration is:
+In the improved `tidymodels` specification, proportional sampling is implemented using:
 
-| Parameter | Setting |
-|:--|--:|
-| Boosting rounds | 200 |
-| Maximum tree depth | 2 |
-| Learning rate | 0.05 |
-| Minimum child weight | 30 |
-| Row subsampling | 0.80 |
-| Column subsampling | 0.80 |
-| L2 regularization, `lambda` | 10 |
-| Training window | Expanding |
+```r
+sample_size = 0.8
+mtry = 0.8
+```
 
-The improved model is retrained annually using only previously realized labels.
+with:
 
-Because several model components change together, the comparison evaluates the combined procedure rather than isolating the contribution of any single modification.
+```r
+set_engine(
+  "xgboost",
+  counts = FALSE,
+  lambda = 5
+)
+```
+
+The improved model is fitted once. Its portfolio calculations follow the same procedure as the original model.
 
 ### Predictive evaluation
 
-Both models are compared with a historical-mean forecast calculated from the pre-test training sample.
+Both models are compared with a historical-mean forecast calculated from the original training sample.
 
 Reported metrics are:
 
 - root mean squared error, or RMSE;
 - mean absolute error, or MAE;
+- Pearson correlation;
+- pooled Spearman rank correlation;
+- directional accuracy;
 - out-of-sample R² relative to the historical-mean forecast; and
-- average within-date Spearman rank correlation.
+- average daily cross-sectional Spearman rank correlation.
 
-Negative out-of-sample R² means a model has higher squared prediction error than the historical-mean benchmark.
+Negative out-of-sample R² means that a model has higher squared prediction error than the historical-mean benchmark.
 
-The historical-mean forecast assigns all stocks the same prediction, so its within-date rank correlation is undefined and reported as `NA`.
+The historical-mean forecast assigns every stock the same prediction. Its correlation-based measures are therefore reported as `NA`.
 
 ### Investment evaluation
 
-The original and improved model portfolios each hold the ten highest-ranked stocks at equal weights.
+The two models use the same classroom portfolio procedure:
 
-They are compared with:
+1. Identify the first available prediction date in each month.
+2. Select the ten stocks with the highest predicted returns.
+3. Apply the classroom weighting calculation based on nonnegative predictions.
+4. Calculate portfolio returns using the original forward-return target.
+5. Compound the resulting monthly portfolio returns.
 
-1. an equal-weight portfolio of all 50 sample stocks; and
-2. buy-and-hold SPY.
+The reported comparison includes **34 monthly portfolios**, from **January 2024 through October 2026**.
 
-All strategies use the same investment window. The backtest accounts for weight drift before rebalancing and applies transaction costs to estimated purchases and sales.
+Additional investment benchmarks are:
 
-Cost scenarios are **0, 10, and 25 basis points per dollar bought or sold**. Initial purchases and final liquidation are included.
+- the equal-weight return of the stock universe on the same prediction dates; and
+- SPY returns calculated using the classroom monthly aggregation.
 
-Daily wealth is used to calculate:
+The comparison reports:
 
-- total return;
-- compound annual growth rate;
-- annualized volatility;
-- Sharpe ratio;
-- maximum drawdown; and
-- calendar-year returns within the backtest window.
+- cumulative compounded return;
+- average monthly return;
+- monthly return standard deviation;
+- the proportion of positive months;
+- maximum drawdown at monthly endpoints;
+- compounded returns by signal year; and
+- average return differences between strategies.
 
-Sharpe ratios assume a zero risk-free rate.
+The original-formula Sharpe, alpha, and beta outputs are saved separately in `05_original_formula_metrics.csv`.
 
-Uncertainty in return differences and prediction-loss reductions is assessed using 2,000 circular block-bootstrap resamples with blocks of six holding periods. Each period retains its full cross-section of stocks.
+Investment figures display compounded monthly return indices. No transaction-cost scenarios are included.
 
 ## Repository Structure
 
@@ -237,122 +282,81 @@ Zhengyang_Ding_AEDS6400_blog9/
 ├── code/
 │   ├── 00_config.R
 │   ├── 01_class_results.R
-│   ├── 02_download_prices.R
-│   ├── 03_build_features.R
-│   └── 04_compare_models.R
+│   ├── 02_prepare_data.R
+│   ├── 03_original_model.R
+│   ├── 04_improved_model.R
+│   └── 05_compare_models.R
 ├── data/
 │   ├── raw_data/
 │   │   ├── Full_Result.xlsx
+│   │   ├── market_snapshot.rds
 │   │   ├── prices_daily.csv
-│   │   ├── prices_daily.rds
-│   │   └── yahoo_cache/
-│   │       ├── AAPL.rds
-│   │       ├── ABT.rds
-│   │       ├── ADBE.rds
-│   │       ├── AMAT.rds
-│   │       ├── AMD.rds
-│   │       ├── AMGN.rds
-│   │       ├── AXP.rds
-│   │       ├── BA.rds
-│   │       ├── BAC.rds
-│   │       ├── BLK.rds
-│   │       ├── CAT.rds
-│   │       ├── COP.rds
-│   │       ├── COST.rds
-│   │       ├── CSCO.rds
-│   │       ├── CVX.rds
-│   │       ├── DIS.rds
-│   │       ├── DUK.rds
-│   │       ├── GILD.rds
-│   │       ├── GS.rds
-│   │       ├── HD.rds
-│   │       ├── HON.rds
-│   │       ├── IBM.rds
-│   │       ├── INTC.rds
-│   │       ├── JNJ.rds
-│   │       ├── JPM.rds
-│   │       ├── KO.rds
-│   │       ├── LMT.rds
-│   │       ├── MCD.rds
-│   │       ├── MDT.rds
-│   │       ├── MRK.rds
-│   │       ├── MS.rds
-│   │       ├── MSFT.rds
-│   │       ├── NKE.rds
-│   │       ├── NVDA.rds
-│   │       ├── ORCL.rds
-│   │       ├── PEP.rds
-│   │       ├── PFE.rds
-│   │       ├── PG.rds
-│   │       ├── QCOM.rds
-│   │       ├── SBUX.rds
-│   │       ├── SLB.rds
-│   │       ├── SO.rds
-│   │       ├── SPY.rds
-│   │       ├── T.rds
-│   │       ├── TXN.rds
-│   │       ├── UNH.rds
-│   │       ├── UPS.rds
-│   │       ├── VZ.rds
-│   │       ├── WFC.rds
-│   │       ├── WMT.rds
-│   │       └── XOM.rds
+│   │   └── prices_daily.rds
 │   └── processed_data/
 │       ├── 01_class_data_audit.csv
 │       ├── 01_class_results_clean.csv
-│       ├── 03_model_panel.rds
-│       ├── 04_daily_backtest.csv
-│       ├── 04_holdings.csv
-│       ├── 04_out_of_sample_predictions.csv
-│       └── 04_period_returns.csv
+│       ├── 03_original_results.rds
+│       ├── 03_original_predictions.csv
+│       ├── 03_original_holdings.csv
+│       ├── 04_improved_results.rds
+│       ├── 04_improved_predictions.csv
+│       ├── 04_improved_holdings.csv
+│       └── 05_prediction_comparison.csv
 ├── models/
-│   ├── 04_selected_config.rds
-│   ├── 04_original_model.rds
-│   ├── 04_improved_2020.rds
-│   ├── 04_improved_2021.rds
-│   ├── 04_improved_2022.rds
-│   ├── 04_improved_2023.rds
-│   ├── 04_improved_2024.rds
-│   └── 04_improved_2025.rds
+│   ├── 03_original_model.rds
+│   └── 04_improved_model.rds
 └── results/
     ├── figures/
     │   ├── 01_class_return_distribution.png
     │   ├── 01_class_paired_returns.png
     │   ├── 01_class_mean_difference.png
-    │   ├── 04_net_wealth.png
-    │   ├── 04_annual_returns.png
-    │   └── 04_cost_sensitivity.png
+    │   ├── 03_original_model_performance.png
+    │   ├── 05_model_performance_comparison.png
+    │   ├── 05_annual_return_comparison.png
+    │   └── 05_prediction_rmse.png
     ├── notes/
-    │   ├── 00_design_notes.txt
     │   ├── 01_class_results_summary.txt
     │   ├── 01_session_info.txt
     │   ├── 02_session_info.txt
-    │   └── 04_session_info.txt
+    │   ├── 03_original_method.txt
+    │   ├── 03_session_info.txt
+    │   ├── 04_session_info.txt
+    │   ├── 05_method_record.txt
+    │   ├── 05_results_summary.txt
+    │   └── 05_session_info.txt
     └── tables/
         ├── 01_data_quality.csv
         ├── 01_portfolio_summary.csv
         ├── 01_paired_comparison.csv
         ├── 02_download_log.csv
         ├── 02_price_coverage.csv
-        ├── 02_missing_quotes.csv
-        ├── 03_observations_by_year.csv
-        ├── 03_feature_definitions.csv
-        ├── 04_validation_results.csv
-        ├── 04_prediction_metrics.csv
-        ├── 04_rank_ic_by_period.csv
-        ├── 04_investment_performance.csv
-        ├── 04_annual_returns.csv
-        ├── 04_return_difference_intervals.csv
-        └── 04_prediction_loss_intervals.csv
+        ├── 02_snapshot.csv
+        ├── 02_stock_universe.csv
+        ├── 03_original_returns.csv
+        ├── 03_original_reported_metrics.csv
+        ├── 03_latest_portfolio.csv
+        ├── 03_sample_summary.csv
+        ├── 04_improved_returns.csv
+        ├── 04_model_settings.csv
+        ├── 04_improved_features.csv
+        ├── 04_sample_comparison.csv
+        ├── 05_prediction_metrics.csv
+        ├── 05_rank_ic_by_date.csv
+        ├── 05_monthly_return_comparison.csv
+        ├── 05_investment_summary.csv
+        ├── 05_original_formula_metrics.csv
+        ├── 05_return_differences.csv
+        └── 05_annual_returns.csv
 ```
 
 ### Script descriptions
 
-- `code/00_config.R` loads packages and defines project paths, the stock universe, evaluation dates, and trading assumptions.
-- `code/01_class_results.R` reads the classroom spreadsheet, validates values, compares paired portfolios, and saves statistics and figures.
-- `code/02_download_prices.R` downloads or reads cached Yahoo data, validates coverage, and saves the combined price dataset.
-- `code/03_build_features.R` constructs both feature sets, forward-return labels, and common prediction dates.
-- `code/04_compare_models.R` selects parameters using validation data, generates out-of-sample predictions, runs portfolio backtests, and saves evaluation results.
+- `code/00_config.R` loads packages and defines project paths, the stock universe, dates, and shared functions.
+- `code/01_class_results.R` reads the classroom spreadsheet, compares paired portfolios, and saves statistics and figures.
+- `code/02_prepare_data.R` downloads or reads the market snapshot and saves price data, coverage information, and download metadata.
+- `code/03_original_model.R` constructs the original predictors and target, fits the classroom XGBoost model, and saves predictions, portfolios, returns, and the original performance figure.
+- `code/04_improved_model.R` constructs the revised predictors, fits the improved model on the same sample, and applies the same portfolio procedure.
+- `code/05_compare_models.R` combines the saved outputs, calculates comparison metrics, and generates tables and figures.
 
 ### Main result files
 
@@ -360,15 +364,18 @@ Zhengyang_Ding_AEDS6400_blog9/
 |:--|:--|
 | `01_portfolio_summary.csv` | Classroom portfolio descriptive statistics |
 | `01_paired_comparison.csv` | Paired differences, tests, and confidence intervals |
-| `02_price_coverage.csv` | Data coverage by security |
-| `03_observations_by_year.csv` | Eligible model observations by year |
-| `04_validation_results.csv` | Candidate configurations and validation scores |
-| `04_prediction_metrics.csv` | Out-of-sample prediction metrics |
-| `04_rank_ic_by_period.csv` | Within-date ranking performance |
-| `04_investment_performance.csv` | Investment metrics across cost scenarios |
-| `04_annual_returns.csv` | Annual returns within the investment window |
-| `04_return_difference_intervals.csv` | Bootstrap intervals for return differences |
-| `04_prediction_loss_intervals.csv` | Bootstrap intervals for prediction-loss reductions |
+| `02_price_coverage.csv` | Price coverage by security |
+| `02_snapshot.csv` | Requested dates, final observation date, and download timestamp |
+| `03_sample_summary.csv` | Original training and test sample information |
+| `04_model_settings.csv` | Original and improved model settings |
+| `04_sample_comparison.csv` | Confirmation of matching sample sizes and dates |
+| `05_prediction_metrics.csv` | Test-sample prediction metrics |
+| `05_rank_ic_by_date.csv` | Daily cross-sectional ranking performance |
+| `05_monthly_return_comparison.csv` | Monthly model and benchmark returns |
+| `05_investment_summary.csv` | Compounded returns and monthly risk measures |
+| `05_original_formula_metrics.csv` | Original-formula Sharpe, alpha, and beta outputs |
+| `05_return_differences.csv` | Average and median return differences |
+| `05_annual_returns.csv` | Compounded monthly returns by signal year |
 
 These tables are saved in `results/tables/`.
 
@@ -377,15 +384,16 @@ Main figures in `results/figures/` include:
 - `01_class_return_distribution.png`
 - `01_class_paired_returns.png`
 - `01_class_mean_difference.png`
-- `04_net_wealth.png`
-- `04_annual_returns.png`
-- `04_cost_sensitivity.png`
+- `03_original_model_performance.png`
+- `05_model_performance_comparison.png`
+- `05_annual_return_comparison.png`
+- `05_prediction_rmse.png`
 
 ## Reproduction Instructions
 
 ### 1. Open the repository in RStudio
 
-Clone or download the repository and open an R session.
+Clone or download the repository and open its RStudio project.
 
 The original local project directory is:
 
@@ -393,13 +401,13 @@ The original local project directory is:
 D:/Rproject/6400-blog9
 ```
 
-The scripts currently contain absolute paths. If using another location, update:
+The scripts contain absolute paths. If using another directory, update:
 
 - `project_dir` in `code/00_config.R`;
-- `project_dir` in `code/01_class_results.R`; and
-- the `source()` path to `00_config.R` at the beginning of scripts 02, 03, and 04.
+- any project path defined directly in `code/01_class_results.R`; and
+- the `source()` path to `00_config.R` in scripts 01–05, where present.
 
-Keep the relative directory structure unchanged.
+Keep the relative folder structure unchanged.
 
 ### 2. Install the required packages
 
@@ -409,13 +417,15 @@ Run once:
 install.packages(c(
   "readxl",
   "tidyverse",
-  "quantmod",
+  "tidyquant",
+  "tidymodels",
+  "lubridate",
   "slider",
   "xgboost"
 ))
 ```
 
-Use an R version compatible with the installed package versions. Session information is saved under `results/notes/` when the scripts run.
+Session information is saved in `results/notes/` when the analysis scripts run.
 
 ### 3. Confirm the classroom input file
 
@@ -425,9 +435,9 @@ The classroom spreadsheet must be located at:
 data/raw_data/Full_Result.xlsx
 ```
 
-Its portfolio columns should be named `portfolio1` and `portfolio2`. The script also accepts differences in capitalization, spaces, and underscores.
+The portfolio columns should be named `portfolio1` and `portfolio2`. The classroom script also accepts differences in capitalization, spaces, and underscores.
 
-Nonempty values that cannot be parsed trigger an error. Incomplete portfolio pairs are documented and excluded from paired comparisons.
+Incomplete portfolio pairs are documented and excluded from paired comparisons. Nonempty values that cannot be parsed trigger an error for inspection.
 
 ### 4. Run the scripts in order
 
@@ -436,35 +446,57 @@ For the original local directory:
 ```r
 setwd("D:/Rproject/6400-blog9")
 
+source("code/00_config.R")
 source("code/01_class_results.R")
-source("code/02_download_prices.R")
-source("code/03_build_features.R")
-source("code/04_compare_models.R")
+source("code/02_prepare_data.R")
+source("code/03_original_model.R")
+source("code/04_improved_model.R")
+source("code/05_compare_models.R")
 ```
 
-`00_config.R` is loaded automatically by the market-analysis scripts.
+The analysis scripts load `00_config.R` as needed.
 
-The model-comparison stage fits multiple candidate models and may take several minutes, depending on the computer.
+Stages 03 and 04 each fit one model. Stage 05 reads their saved outputs without refitting either model.
 
 ### 5. Use the cached market data
 
-By default, the download script uses existing per-security cache files:
+The market snapshot is stored in:
 
-```r
-refresh_cache <- FALSE
+```text
+data/raw_data/market_snapshot.rds
 ```
 
-With complete caches, no new market-data requests are needed.
-
-To deliberately obtain a new snapshot, change this setting in `02_download_prices.R`:
+By default, `02_prepare_data.R` reuses a snapshot when its requested date range and security list match the current configuration:
 
 ```r
-refresh_cache <- TRUE
+refresh_data <- FALSE
 ```
 
-Yahoo may revise historical adjusted prices, and interface availability can change. Using the committed snapshot is preferable when reproducing the reported results.
+Because the download endpoint is `Sys.Date()`, running Stage 02 on a later date requests a new snapshot.
 
-If `prices_daily.rds` already exists, scripts 03 and 04 can also be run directly without rerunning the download stage.
+To deliberately refresh the data on the same date, change the setting in `00_config.R`:
+
+```r
+refresh_data <- TRUE
+```
+
+To reproduce the reported results using the committed snapshot, skip Stage 02 and run:
+
+```r
+source("code/00_config.R")
+source("code/01_class_results.R")
+source("code/03_original_model.R")
+source("code/04_improved_model.R")
+source("code/05_compare_models.R")
+```
+
+This uses the saved `market_snapshot.rds` rather than requesting new prices.
+
+To regenerate only the comparison tables and figures from saved model outputs, run:
+
+```r
+source("code/05_compare_models.R")
+```
 
 ### 6. Inspect the outputs
 
@@ -474,15 +506,16 @@ Start with:
 
 ```text
 results/tables/01_paired_comparison.csv
-results/tables/04_validation_results.csv
-results/tables/04_prediction_metrics.csv
-results/tables/04_investment_performance.csv
-results/tables/04_return_difference_intervals.csv
+results/tables/04_sample_comparison.csv
+results/tables/04_model_settings.csv
+results/tables/05_prediction_metrics.csv
+results/tables/05_investment_summary.csv
+results/tables/05_monthly_return_comparison.csv
 ```
 
 Then review the figures in `results/figures/`.
 
-Random seeds are specified, but exact model results may vary with package versions and computing environments. The saved tables and session information document the reported run.
+Random seeds are specified. The saved data snapshot, result tables, and session information document the reported run.
 
 ## Expected Interpretation
 
@@ -490,43 +523,51 @@ Random seeds are specified, but exact model results may vary with package versio
 
 The analyzed portfolios earned an average return of 3.09%, compared with 1.18% for the subjective portfolios.
 
-Their average paired advantage was 1.91 percentage points. However, the paired-test 95% interval ranged from −0.38 to 4.20 percentage points, and the two-sided p-value was approximately 0.100.
+Their average paired advantage was 1.91 percentage points. Portfolio 2 outperformed in 30 of the 45 teams.
 
-The results suggest a possible advantage but do not establish a stable or causal benefit from analysis.
+However, the paired-test 95% confidence interval ranged from −0.38 to 4.20 percentage points, with a two-sided p-value of approximately 0.100.
+
+The results suggest a possible benefit from analysis, but leave uncertainty about a consistent advantage.
+
+Our subjective portfolio screenshot also shows that a positive overall result can depend heavily on one stock: Moderna contributed approximately 79% of the holdings’ net gain.
 
 ### Predictive results
 
-| Model | RMSE | Out-of-sample R² | Mean rank correlation |
-|:--|--:|--:|--:|
-| Historical mean | 0.08433 | 0.0000 | NA |
-| Original XGBoost | 0.08951 | −0.1266 | 0.0130 |
-| Improved XGBoost | 0.08486 | −0.0125 | 0.0288 |
+| Model | RMSE | MAE | Out-of-sample R² | Direction accuracy | Mean daily rank correlation |
+|:--|--:|--:|--:|--:|--:|
+| Historical mean | 0.08887 | 0.06428 | 0.0000 | 56.06% | NA |
+| Original XGBoost | 0.09354 | 0.06830 | −0.1079 | 52.46% | 0.0405 |
+| Improved XGBoost | 0.09184 | 0.06683 | −0.0679 | 51.00% | 0.0212 |
 
-The improved model reduced RMSE by approximately 5.20% relative to the original model. It also improved stock-ranking performance.
+The revised model reduced RMSE by approximately 1.82% relative to the original. MAE also declined.
 
-Nevertheless, the historical mean remained the more accurate point forecast.
+However, the historical mean remained more accurate. Direction accuracy and average daily ranking correlation declined after the model changes.
+
+The improvement was therefore limited to some measures of return-magnitude prediction.
 
 ### Investment results
 
-At a one-way trading cost of 10 basis points:
+The comparison includes 34 monthly portfolios.
 
-| Strategy | Annualized return | Annualized volatility | Sharpe ratio | Maximum drawdown |
-|:--|--:|--:|--:|--:|
-| Original XGBoost | 19.40% | 24.93% | 0.84 | −41.31% |
-| Improved XGBoost | 23.04% | 28.80% | 0.87 | −35.98% |
-| Equal-weight universe | 14.77% | 20.22% | 0.78 | −33.43% |
-| SPY | 14.81% | 20.88% | 0.77 | −33.72% |
+| Strategy | Cumulative return | Monthly return standard deviation | Monthly-endpoint maximum drawdown |
+|:--|--:|--:|--:|
+| Original XGBoost | 437.39% | 8.66% | −11.80% |
+| Improved XGBoost | 432.37% | 16.35% | −28.06% |
+| Equal-weight universe | 61.93% | 2.97% | −7.29% |
+| SPY | 69.26% | 3.18% | −6.28% |
 
-The improved strategy generated higher returns in this sample, but also had higher volatility than the original strategy and both simple benchmarks.
+These are hypothetical results calculated from the classroom backtest procedure.
 
-Its return advantage was not consistent across years. Bootstrap intervals for its average holding-period return advantage over each comparator included zero.
+The revised model finished slightly below the original while experiencing approximately 1.89 times its monthly return standard deviation and a deeper monthly-endpoint drawdown.
 
-At 25 basis points, its annualized return declined to 20.64%, and its Sharpe ratio fell to approximately 0.80.
+Its average monthly return was higher—6.15%, compared with 5.41%—but its compounded result was lower. This illustrates the importance of distinguishing arithmetic average returns from compounded growth.
+
+The revised model outperformed the original in 2025, but trailed in 2024 and January–October 2026.
 
 ## Summary
 
-This project demonstrates a complete workflow connecting classroom portfolio evidence, market-data collection, feature construction, gradient boosting, and out-of-sample investment evaluation.
+This project connects classroom portfolio evidence, market-data collection, feature construction, gradient boosting, and investment evaluation.
 
-More careful model design improved prediction errors relative to the original model and produced higher returns in the reported backtest. It did not outperform a historical-mean forecast on prediction accuracy or establish reliable investment outperformance.
+The revised model slightly reduced prediction errors but weakened direction and stock-ranking accuracy. Its cumulative investment result was close to the original’s, with substantially greater monthly variation.
 
-The main lesson is to evaluate forecasting errors, investment returns, risk, trading costs, and uncertainty together. A higher final portfolio value alone does not demonstrate repeatable stock-prediction ability.
+The main lesson is that a smaller forecasting error does not automatically produce a better stock-selection strategy. Prediction accuracy, ranking ability, compounded returns, and investment risk need to be evaluated together.
