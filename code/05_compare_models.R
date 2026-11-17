@@ -3,7 +3,7 @@
 # Does not refit or modify either model
 # ============================================================
 
-source("D:/Rproject/6400-blog9/code/00_config.R")
+source(here::here("code", "00_config.R"))
 
 original <- readRDS(
   file.path(paths$processed, "03_original_results.rds")
