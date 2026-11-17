@@ -11,15 +11,16 @@ library(lubridate)
 library(slider)
 library(xgboost)
 
-project_dir <- "D:/Rproject/6400-blog9"
+here::i_am("code/00_config.R")
+project_dir <- here::here()
 
 paths <- list(
-  raw = file.path(project_dir, "data", "raw_data"),
-  processed = file.path(project_dir, "data", "processed_data"),
-  models = file.path(project_dir, "models"),
-  tables = file.path(project_dir, "results", "tables"),
-  figures = file.path(project_dir, "results", "figures"),
-  notes = file.path(project_dir, "results", "notes")
+  raw = here::here("data", "raw_data"),
+  processed = here::here("data", "processed_data"),
+  models = here::here("models"),
+  tables = here::here("results", "tables"),
+  figures = here::here("results", "figures"),
+  notes = here::here("results", "notes")
 )
 
 invisible(lapply(
