@@ -393,21 +393,7 @@ Main figures in `results/figures/` include:
 
 ### 1. Open the repository in RStudio
 
-Clone or download the repository and open its RStudio project.
-
-The original local project directory is:
-
-```text
-D:/Rproject/6400-blog9
-```
-
-The scripts contain absolute paths. If using another directory, update:
-
-- `project_dir` in `code/00_config.R`;
-- any project path defined directly in `code/01_class_results.R`; and
-- the `source()` path to `00_config.R` in scripts 01–05, where present.
-
-Keep the relative folder structure unchanged.
+Clone or download the repository and open `Zhengyang_Ding_AEDS6400_blog9.Rproj`. The scripts locate files relative to the project.
 
 ### 2. Install the required packages
 
@@ -435,17 +421,15 @@ The classroom spreadsheet must be located at:
 data/raw_data/Full_Result.xlsx
 ```
 
-The portfolio columns should be named `portfolio1` and `portfolio2`. The classroom script also accepts differences in capitalization, spaces, and underscores.
+The portfolio columns should be named `portfolio1` (without data analysis) and `portfolio2` (with data analysis). The classroom script also accepts differences in capitalization, spaces, and underscores.
 
 Incomplete portfolio pairs are documented and excluded from paired comparisons. Nonempty values that cannot be parsed trigger an error for inspection.
 
 ### 4. Run the scripts in order
 
-For the original local directory:
+With the repository open as an RStudio project, run:
 
 ```r
-setwd("D:/Rproject/6400-blog9")
-
 source("code/00_config.R")
 source("code/01_class_results.R")
 source("code/02_prepare_data.R")
