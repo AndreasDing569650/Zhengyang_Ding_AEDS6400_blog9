@@ -1,2 +1,0 @@
-teams,mean_difference_value,mean_difference_return,median_difference_return,portfolio2_win_share,tie_share,return_correlation,paired_t_statistic,paired_t_df,paired_t_p_value,paired_t_ci_lower,paired_t_ci_upper,bootstrap_se,bootstrap_ci_lower,bootstrap_ci_upper
-45,1908.8908888888882,0.01908890888888889,0.022306099999999995,0.6666666666666666,0,0.4016891325903384,1.6809848158400256,44,0.09985230056350645,-0.003797180053534484,0.04197499783131227,0.01124709413076254,-0.002592655000000004,0.04173008144444446

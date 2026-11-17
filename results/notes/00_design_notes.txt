@@ -1,8 +1,0 @@
-Fixed sample: 50 selected US stocks; not point-in-time index constituents.
-Yahoo adjusted close is used as a total-return proxy.
-The sample is exposed to survivorship and ex-post selection bias.
-Original model is reconstructed on a common sample and evaluation protocol.
-Validation: 2018-2019. Final test: 2020-2025.
-Signals are formed after the close; trades occur at the next close.
-All feature selection and hyperparameter choices precede the final test.
-Sharpe ratios use a zero risk-free rate; this is explicitly an approximation.
