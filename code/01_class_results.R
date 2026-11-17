@@ -23,12 +23,14 @@
 library(readxl)
 library(tidyverse)
 
+source(here::here("code", "00_config.R"))
+
 set.seed(6409)
 
 
 # 2. Paths and settings ---------------------------------------
 
-project_dir <- "D:/Rproject/6400-blog9"
+project_dir <- here::here()
 
 input_file <- file.path(
   project_dir, "data", "raw_data", "Full_Result.xlsx"
