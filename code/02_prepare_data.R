@@ -2,7 +2,7 @@
 # Stage 2: download the professor's stock universe
 # ============================================================
 
-source("D:/Rproject/6400-blog9/code/00_config.R")
+source(here::here("code", "00_config.R"))
 
 snapshot_file <- file.path(
   paths$raw,
