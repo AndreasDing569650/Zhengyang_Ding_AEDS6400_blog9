@@ -3,7 +3,7 @@
 # Stage 3: Original Gradient Boosting Model
 # ============================================================
 
-source("D:/Rproject/6400-blog9/code/00_config.R")
+source(here::here("code", "00_config.R"))
 
 set.seed(123)
 
