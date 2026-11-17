@@ -1,0 +1,12 @@
+ORIGINAL GRADIENT BOOSTING MODEL
+
+Data: Yahoo Finance daily stock prices and SPY.
+Predictors: price, volume, returns, momentum, volatility,
+short-term returns, and market-adjusted returns.
+Target: adjusted price at t+20 divided by adjusted price at t+1, minus one.
+Training observations: dates before 2024-01-01.
+Test observations: dates from 2024-01-01 onward.
+Model: 300 trees, depth 5, learning rate 0.05,
+loss reduction 0, and min_n 10.
+Portfolios are selected monthly using the original weighting formula.
+Reported Sharpe and alpha retain the original model's formulas.

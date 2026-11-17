@@ -1,0 +1,19 @@
+MODEL COMPARISON
+
+Data: Yahoo Finance daily prices for 95 stocks and SPY.
+Both models use the same price snapshot, training observations,
+test observations, and forward-return targets.
+
+The original model follows the classroom specification.
+The improved model changes the predictors and model parameters.
+
+Both models are trained using observations before 2024-01-01
+and evaluated using observations from 2024-01-01 onward.
+Portfolio selection and return calculations follow the same procedure.
+
+Prediction performance is compared using RMSE, MAE, correlations,
+directional accuracy, and out-of-sample R-squared.
+The historical-mean forecast provides a simple prediction benchmark.
+
+Investment performance is compared using monthly portfolio returns.
+Additional benchmarks include the equal-weight stock universe and SPY.

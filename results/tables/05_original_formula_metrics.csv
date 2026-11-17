@@ -1,0 +1,3 @@
+model,sharpe_as_original_code,alpha_as_original_code,beta_as_original_code
+Original XGBoost,9.910301064957107,6.658748776335351,1.7196115234458167
+Improved XGBoost,5.974901827154894,3.13954608136481,3.050599525499007

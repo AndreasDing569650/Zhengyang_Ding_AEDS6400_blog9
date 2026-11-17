@@ -1,0 +1,55 @@
+# A tibble: 3 × 9
+  model               observations   rmse    mae
+  <chr>                      <int>  <dbl>  <dbl>
+1 historical_mean            66595 0.0889 0.0643
+2 improved_prediction        66595 0.0918 0.0668
+3 original_prediction        66595 0.0935 0.0683
+  pearson_correlation pooled_rank_correlation directional_accuracy
+                <dbl>                   <dbl>                <dbl>
+1             NA                     NA                      0.561
+2              0.0377                -0.00379                0.510
+3              0.0328                 0.0157                 0.525
+   r2_oos mean_daily_rank_ic
+    <dbl>              <dbl>
+1  0                 NA     
+2 -0.0679             0.0212
+3 -0.108              0.0405
+# A tibble: 4 × 8
+  strategy            months total_compounded_return
+  <chr>                <int>                   <dbl>
+1 equal_weight_return     34                   0.619
+2 improved_return         34                   4.32 
+3 original_return         34                   4.37 
+4 spy_return              34                   0.693
+  mean_monthly_return monthly_return_sd positive_month_share
+                <dbl>             <dbl>                <dbl>
+1              0.0147            0.0297                0.735
+2              0.0615            0.163                 0.676
+3              0.0541            0.0866                0.676
+4              0.0161            0.0318                0.735
+  monthly_endpoint_max_drawdown sharpe_as_original_code
+                          <dbl>                   <dbl>
+1                       -0.0729                    7.85
+2                       -0.281                     5.97
+3                       -0.118                     9.91
+4                       -0.0628                    8.02
+# A tibble: 2 × 4
+  model            sharpe_as_original_code alpha_as_original_code
+  <chr>                              <dbl>                  <dbl>
+1 Original XGBoost                    9.91                   6.66
+2 Improved XGBoost                    5.97                   3.14
+  beta_as_original_code
+                  <dbl>
+1                  1.72
+2                  3.05
+# A tibble: 3 × 5
+  comparison                         months mean_monthly_difference
+  <chr>                               <int>                   <dbl>
+1 Improved minus original_return         34                 0.00744
+2 Improved minus equal_weight_return     34                 0.0468 
+3 Improved minus spy_return              34                 0.0454 
+  median_monthly_difference outperformance_share
+                      <dbl>                <dbl>
+1                   0.0147                 0.529
+2                   0.00295                0.588
+3                   0.0158                 0.588

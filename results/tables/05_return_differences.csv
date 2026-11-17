@@ -1,0 +1,4 @@
+comparison,months,mean_monthly_difference,median_monthly_difference,outperformance_share
+Improved minus original_return,34,0.007442413829116433,0.014665717089587789,0.5294117647058824
+Improved minus equal_weight_return,34,0.04681873264734203,0.0029498500524027032,0.5882352941176471
+Improved minus spy_return,34,0.04544019390313402,0.01577821151323687,0.5882352941176471
